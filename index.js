@@ -1,7 +1,7 @@
 /*
-	MIT License http://www.opensource.org/licenses/mit-license.php
-	Author Tobias Koppers @sokra
-*/
+ MIT License http://www.opensource.org/licenses/mit-license.php
+ Author Tobias Koppers @sokra
+ */
 var ConcatSource = require("webpack-sources").ConcatSource;
 var async = require("async");
 var ExtractedModule = require("./ExtractedModule");
@@ -107,6 +107,11 @@ function ExtractTextPlugin(id, filename, options) {
 		id = ++nextId;
 	}
 	if(!options) options = {};
+
+	if(!!options.concatAll && /\[(?:name|id)\]/.test(""+filename)){
+		throw new Error("Using 'name' and 'id' wildcards is not allowed with concatAll option set to true");
+	}
+
 	this.filename = filename;
 	this.options = options;
 	this.id = id;
@@ -286,6 +291,13 @@ ExtractTextPlugin.prototype.apply = function(compiler) {
 			}.bind(this));
 		}.bind(this));
 		compilation.plugin("additional-assets", function(callback) {
+			var options = this.options;
+
+			if(!!options.concatAll){
+				var allStyles = new ConcatSource();
+				extractedChunks = extractedChunks.reverse();
+			}
+
 			extractedChunks.forEach(function(extractedChunk) {
 				if(extractedChunk.modules.length) {
 					extractedChunk.modules.sort(function(a, b) {
@@ -296,14 +308,20 @@ ExtractTextPlugin.prototype.apply = function(compiler) {
 						return getOrder(a, b);
 					});
 					var chunk = extractedChunk.originalChunk;
-					var source = this.renderExtractedChunk(extractedChunk);
+					var source = this.renderExtractedChunk( extractedChunk );
+
+					if(!!options.concatAll) {
+						allStyles.add(source);
+					}
+
 					var file = compilation.getPath(filename, {
 						chunk: chunk
 					}).replace(/\[(?:(\w+):)?contenthash(?::([a-z]+\d*))?(?::(\d+))?\]/ig, function() {
 						return loaderUtils.getHashDigest(source.source(), arguments[1], arguments[2], parseInt(arguments[3], 10));
 					});
-					compilation.assets[file] = source;
-					chunk.files.push(file);
+
+					compilation.assets[ file ] = !!options.concatAll ? allStyles : source;
+					chunk.files.push( file );
 				}
 			}, this);
 			callback();
