@@ -314,7 +314,6 @@ ExtractTextPlugin.prototype.apply = function(compiler) {
 					if ( !!options.concatAll ) {
 						if ( this.options.forcePrependChunks ) {
 							var chunkIndex = this.options.forcePrependChunks.indexOf( chunk.name );
-							console.log( chunk.name, chunkIndex );
 							if ( chunkIndex !== -1 ) {
 								allStyles.children.splice( chunkIndex, 0, source );
 							} else {
